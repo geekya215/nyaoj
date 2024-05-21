@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.geekya215.nyaoj.auth.dto.LoginRequest;
 import io.geekya215.nyaoj.auth.dto.LoginResponse;
+import io.geekya215.nyaoj.auth.dto.SignUpRequest;
 import io.geekya215.nyaoj.common.ErrorResponse;
 import io.geekya215.nyaoj.common.Result;
 import io.geekya215.nyaoj.user.User;
@@ -29,8 +30,7 @@ public class AuthService {
             UserMapper userMapper,
             RefreshTokenMapper refreshTokenMapper,
             JwtService jwtService,
-            RedisTemplate<String, String> redisTemplate)
-    {
+            RedisTemplate<String, String> redisTemplate) {
         this.userMapper = userMapper;
         this.refreshTokenMapper = refreshTokenMapper;
         this.jwtService = jwtService;
@@ -71,6 +71,28 @@ public class AuthService {
             return Result.success(new LoginResponse(accessToken, uuid, now.plusSeconds(jwtService.getExpirationTime())));
         } else {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_UNAUTHORIZED, "username not match password"));
+        }
+    }
+
+    public @NonNull Result<Void, ErrorResponse<String>> signUp(@NonNull final SignUpRequest signUpRequest) {
+        final QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        final User user = userMapper.selectOne(queryWrapper
+                .eq("username", signUpRequest.username())
+                .eq("email", signUpRequest.email()));
+
+        if (user != null) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_CONFLICT, "username or email already exist"));
+        } else {
+            final String hashedPassword = BCrypt.withDefaults().hashToString(4, signUpRequest.password().toCharArray());
+
+            final User newUser = new User();
+            newUser.setUsername(signUpRequest.username());
+            newUser.setEmail(signUpRequest.email());
+            newUser.setPassword(hashedPassword);
+
+            userMapper.insert(newUser);
+
+            return Result.success();
         }
     }
 }

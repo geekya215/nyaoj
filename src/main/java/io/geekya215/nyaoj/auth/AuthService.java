@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.geekya215.nyaoj.auth.dto.LoginRequest;
 import io.geekya215.nyaoj.auth.dto.LoginResponse;
+import io.geekya215.nyaoj.auth.dto.RefreshAccessTokenResponse;
 import io.geekya215.nyaoj.auth.dto.SignUpRequest;
 import io.geekya215.nyaoj.common.ErrorResponse;
 import io.geekya215.nyaoj.common.Result;
@@ -37,6 +38,10 @@ public class AuthService {
         this.redisTemplate = redisTemplate;
     }
 
+    static @NonNull String buildRedisKey(@NonNull Long userId) {
+        return "token:" + userId;
+    }
+
     public @NonNull Result<LoginResponse, ErrorResponse<String>> login(@NonNull final LoginRequest loginRequest) {
         final QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         final User user = userMapper.selectOne(queryWrapper.eq("username", loginRequest.username()));
@@ -45,7 +50,7 @@ public class AuthService {
                 return Result.failure(ErrorResponse.of(HttpServletResponse.SC_FORBIDDEN, "user has been banned"));
             }
 
-            final String accessTokenKey = "token:" + user.getId();
+            final String accessTokenKey = buildRedisKey(user.getId());
 
             if (redisTemplate.opsForValue().get(accessTokenKey) != null) {
                 return Result.failure(ErrorResponse.of(HttpServletResponse.SC_CONFLICT, "user already login"));
@@ -74,6 +79,15 @@ public class AuthService {
         }
     }
 
+    public @NonNull Result<Void, ErrorResponse<String>> logout(final Long userId) {
+        redisTemplate.delete(buildRedisKey(userId));
+
+        final QueryWrapper<RefreshToken> wrapper = new QueryWrapper<>();
+        refreshTokenMapper.delete(wrapper.eq("user_id", userId));
+
+        return Result.success();
+    }
+
     public @NonNull Result<Void, ErrorResponse<String>> signUp(@NonNull final SignUpRequest signUpRequest) {
         final QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         final User user = userMapper.selectOne(queryWrapper
@@ -93,6 +107,29 @@ public class AuthService {
             userMapper.insert(newUser);
 
             return Result.success();
+        }
+    }
+
+    public @NonNull Result<RefreshAccessTokenResponse, ErrorResponse<String>> refreshAccessToken(@NonNull String token) {
+        final QueryWrapper<RefreshToken> queryWrapper = new QueryWrapper<>();
+        final RefreshToken refreshToken = refreshTokenMapper.selectOne(queryWrapper.eq("token", token));
+        if (refreshToken != null) {
+            final Instant now = Instant.now();
+            if (now.isBefore(refreshToken.getExpireAt())) {
+                final String accessToken = jwtService.generateToken(refreshToken.getUserId());
+
+                redisTemplate.opsForValue().set(buildRedisKey(refreshToken.getUserId()), accessToken, Duration.ofSeconds(jwtService.getExpirationTime()));
+
+                final RefreshAccessTokenResponse refreshAccessTokenResponse =
+                        new RefreshAccessTokenResponse(accessToken, now.plusSeconds(jwtService.getExpirationTime()));
+                return Result.success(refreshAccessTokenResponse);
+            } else {
+                // remove out of date refresh token
+                refreshTokenMapper.delete(queryWrapper.eq("token", token));
+                return Result.failure(ErrorResponse.of(HttpServletResponse.SC_UNAUTHORIZED, "out of date refresh token"));
+            }
+        } else {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_UNAUTHORIZED, "invalid refresh token"));
         }
     }
 }

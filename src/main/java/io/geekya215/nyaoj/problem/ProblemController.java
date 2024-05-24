@@ -24,7 +24,7 @@ public class ProblemController {
     @PostMapping
     public @NonNull ResponseEntity<?> createProblem(@RequestBody @Valid CreateProblemRequest createProblemRequest) {
         return switch (problemService.createProblem(createProblemRequest)) {
-            case Result.Success _ -> ResponseEntity.noContent().build();
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }
@@ -39,7 +39,7 @@ public class ProblemController {
         }
 
         return switch (problemService.addProblemStatement(id, statement)) {
-            case Result.Success _ -> ResponseEntity.noContent().build();
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }
@@ -58,7 +58,7 @@ public class ProblemController {
         }
 
         return switch (problemService.addProblemSample(id, sample)) {
-            case Result.Success _ -> ResponseEntity.noContent().build();
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }
@@ -77,7 +77,7 @@ public class ProblemController {
         }
 
         return switch (problemService.addProblemTestcase(id, testcase)) {
-            case Result.Success _ -> ResponseEntity.noContent().build();
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }

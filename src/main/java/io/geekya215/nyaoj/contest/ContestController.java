@@ -5,6 +5,8 @@ import io.geekya215.nyaoj.common.Result;
 import io.geekya215.nyaoj.contest.dto.AddProblemRequest;
 import io.geekya215.nyaoj.contest.dto.CreateContestRequest;
 import io.geekya215.nyaoj.contest.dto.SingleContestResponse;
+import io.geekya215.nyaoj.registration.RegistrationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -13,16 +15,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/contests")
 public class ContestController {
     private final ContestService contestService;
+    private final RegistrationService registrationService;
 
-    public ContestController(ContestService contestService) {
+    public ContestController(ContestService contestService,
+                             RegistrationService registrationService) {
         this.contestService = contestService;
+        this.registrationService = registrationService;
     }
 
     @PostMapping
@@ -48,7 +52,19 @@ public class ContestController {
             @RequestBody @Valid AddProblemRequest addProblemRequest
     ) {
         return switch (contestService.addContestProblem(id, addProblemRequest)) {
-            case Result.Success _ -> ResponseEntity.noContent().build();
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
+        };
+    }
+
+    @PostMapping("/{id}/registrations")
+    public @NonNull ResponseEntity<?> createContestRegistration(
+            @PathVariable @Positive Long id,
+            HttpServletRequest request
+    ) {
+        final Long userId = ((Long) request.getAttribute("userId"));
+        return switch (registrationService.createRegistration(userId, id)) {
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }

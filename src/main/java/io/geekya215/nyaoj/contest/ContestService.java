@@ -26,12 +26,10 @@ public class ContestService {
     private final ProblemFileMapper problemFileMapper;
     private final ContestProblemMapper contestProblemMapper;
 
-    public ContestService(
-            ContestMapper contestMapper,
-            ProblemMapper problemMapper,
-            ProblemFileMapper problemFileMapper,
-            ContestProblemMapper contestProblemMapper
-    ) {
+    public ContestService(ContestMapper contestMapper,
+                          ProblemMapper problemMapper,
+                          ProblemFileMapper problemFileMapper,
+                          ContestProblemMapper contestProblemMapper) {
         this.contestMapper = contestMapper;
         this.problemMapper = problemMapper;
         this.problemFileMapper = problemFileMapper;
@@ -85,12 +83,19 @@ public class ContestService {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such problem"));
         }
 
-        final QueryWrapper<ContestProblem> contestProblemWrapper = new QueryWrapper<>();
-        final Long cnt = contestProblemMapper.selectCount(contestProblemWrapper
-                .eq("contest_id", contestId)
-                .eq("problem_id", addProblemRequest.problemId()));
-        if (cnt > 0) {
+        // each problem can only be assigned once
+        final QueryWrapper<ContestProblem> existContestProblemWrapper = new QueryWrapper<>();
+        if (contestProblemMapper.exists(existContestProblemWrapper
+                .eq("problem_id", addProblemRequest.problemId()))) {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_CONFLICT, "contest problem already exist"));
+        }
+
+        final QueryWrapper<ContestProblem> duplicateSequenceContestProblemWrapper = new QueryWrapper<>();
+        if (contestProblemMapper.exists(duplicateSequenceContestProblemWrapper
+                .eq("contest_id", contestId)
+                .eq("sequence", addProblemRequest.sequence()))) {
+
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_CONFLICT, "contest problem sequence already exist"));
         }
 
         final QueryWrapper<ProblemFile> problemFileWrapper = new QueryWrapper<>();
@@ -106,7 +111,7 @@ public class ContestService {
 
         contestProblem.setContestId(contestId);
         contestProblem.setProblemId(addProblemRequest.problemId());
-        contestProblem.setSequence(addProblemRequest.sequence().charAt(0));
+        contestProblem.setSequence(addProblemRequest.sequence());
         contestProblem.setColor(addProblemRequest.color());
         contestProblemMapper.insert(contestProblem);
 

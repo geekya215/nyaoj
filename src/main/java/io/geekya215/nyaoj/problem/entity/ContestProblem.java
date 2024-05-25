@@ -12,7 +12,7 @@ public final class ContestProblem implements Serializable {
     private Long id;
     private Long contestId;
     private Long problemId;
-    private Character sequence; // A ~ Z
+    private Integer sequence;
     private Integer color; // hex
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
@@ -41,11 +41,11 @@ public final class ContestProblem implements Serializable {
         this.problemId = problemId;
     }
 
-    public Character getSequence() {
+    public Integer getSequence() {
         return sequence;
     }
 
-    public void setSequence(Character sequence) {
+    public void setSequence(Integer sequence) {
         this.sequence = sequence;
     }
 

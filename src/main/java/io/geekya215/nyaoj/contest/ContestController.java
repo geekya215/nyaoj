@@ -6,6 +6,8 @@ import io.geekya215.nyaoj.contest.dto.AddProblemRequest;
 import io.geekya215.nyaoj.contest.dto.CreateContestRequest;
 import io.geekya215.nyaoj.contest.dto.SingleContestResponse;
 import io.geekya215.nyaoj.registration.RegistrationService;
+import io.geekya215.nyaoj.submission.CreateSubmissionRequest;
+import io.geekya215.nyaoj.submission.SubmissionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -22,11 +24,14 @@ import java.util.List;
 public class ContestController {
     private final ContestService contestService;
     private final RegistrationService registrationService;
+    private final SubmissionService submissionService;
 
     public ContestController(ContestService contestService,
-                             RegistrationService registrationService) {
+                             RegistrationService registrationService,
+                             SubmissionService submissionService) {
         this.contestService = contestService;
         this.registrationService = registrationService;
+        this.submissionService = submissionService;
     }
 
     @PostMapping
@@ -57,6 +62,17 @@ public class ContestController {
         };
     }
 
+    @GetMapping
+    public @NonNull ResponseEntity<?> getContestList(
+            @RequestParam(defaultValue = "1") @Positive Integer page,
+            @RequestParam(defaultValue = "10") @Range(min = 10, max = 20) Integer size
+    ) {
+        return switch (contestService.getContestList(page, size)) {
+            case Result.Success(List<SingleContestResponse> contests) -> ResponseEntity.ok(contests);
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
+        };
+    }
+
     @PostMapping("/{id}/registrations")
     public @NonNull ResponseEntity<?> createContestRegistration(
             @PathVariable @Positive Long id,
@@ -69,13 +85,16 @@ public class ContestController {
         };
     }
 
-    @GetMapping
-    public @NonNull ResponseEntity<?> getContestList(
-            @RequestParam(defaultValue = "1") @Positive Integer page,
-            @RequestParam(defaultValue = "10") @Range(min = 10, max = 20) Integer size
+    @PostMapping("/{id}/problems/{seq}/submissions")
+    public @NonNull ResponseEntity<?> createContestProblemSubmission(
+            @PathVariable @Positive Long id,
+            @PathVariable @Positive Integer seq,
+            @RequestBody @Valid CreateSubmissionRequest createSubmissionRequest,
+            HttpServletRequest request
     ) {
-        return switch (contestService.getContestList(page, size)) {
-            case Result.Success(List<SingleContestResponse> contests) -> ResponseEntity.ok(contests);
+        final Long userId = (Long) request.getAttribute("userId");
+        return switch (submissionService.createSubmission(userId, id, seq, createSubmissionRequest)) {
+            case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }

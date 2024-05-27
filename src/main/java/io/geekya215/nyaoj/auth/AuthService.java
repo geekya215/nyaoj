@@ -27,11 +27,10 @@ public class AuthService {
     private final JwtService jwtService;
     private final RedisTemplate<String, String> redisTemplate;
 
-    public AuthService(
-            UserMapper userMapper,
-            RefreshTokenMapper refreshTokenMapper,
-            JwtService jwtService,
-            RedisTemplate<String, String> redisTemplate) {
+    public AuthService(UserMapper userMapper,
+                       RefreshTokenMapper refreshTokenMapper,
+                       JwtService jwtService,
+                       RedisTemplate<String, String> redisTemplate) {
         this.userMapper = userMapper;
         this.refreshTokenMapper = refreshTokenMapper;
         this.jwtService = jwtService;
@@ -66,6 +65,7 @@ public class AuthService {
             final Instant now = Instant.now();
             final Instant refreshTokenExpireTime = now.plus(15, ChronoUnit.DAYS);
             final String uuid = UUID.randomUUID().toString();
+
             final RefreshToken refreshToken = new RefreshToken();
             refreshToken.setUserId(user.getId());
             refreshToken.setToken(uuid);

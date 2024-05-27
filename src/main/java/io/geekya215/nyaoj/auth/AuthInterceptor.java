@@ -21,6 +21,13 @@ public class AuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         boolean pass = false;
 
+        if (request.getMethod().equals("GET")) {
+            // ignore /contests path
+            if (request.getRequestURI().equals("/contests")) {
+                return true;
+            }
+        }
+
         final String authentication = request.getHeader("Authorization");
         if (authentication != null && authentication.startsWith("Bearer ")) {
             final String token = authentication.substring(7);

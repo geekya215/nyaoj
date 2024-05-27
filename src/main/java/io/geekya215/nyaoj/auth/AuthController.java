@@ -11,10 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -26,7 +23,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public @NonNull ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
+    public @NonNull ResponseEntity<?> login(@RequestBody @Valid final LoginRequest loginRequest) {
         return switch (authService.login(loginRequest)) {
             case Result.Success(LoginResponse loginResponse) -> ResponseEntity.ok(loginResponse);
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
@@ -34,18 +31,17 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public @NonNull ResponseEntity<?> logout(HttpServletRequest request) {
+    public @NonNull ResponseEntity<?> logout(final HttpServletRequest request) {
         final Long userId = (Long) request.getAttribute("userId");
-        final Result<Void, ErrorResponse<String>> result = authService.logout(userId);
-        return switch (result) {
+
+        return switch (authService.logout(userId)) {
             case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_NO_CONTENT).build();
-            case Result.Failure(ErrorResponse(int statusCode, String message)) ->
-                    ResponseEntity.status(statusCode).body(message);
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }
 
     @PostMapping("/signup")
-    public @NonNull ResponseEntity<?> signUp(@RequestBody @Valid SignUpRequest signUpRequest) {
+    public @NonNull ResponseEntity<?> signUp(@RequestBody @Valid final SignUpRequest signUpRequest) {
         return switch (authService.signUp(signUpRequest)) {
             case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
@@ -53,14 +49,11 @@ public class AuthController {
     }
 
     @PostMapping("/refresh_token")
-    public @NonNull ResponseEntity<?> refreshToken(HttpServletRequest request) {
-        final String refreshToken = request.getHeader("X-Refresh-Token");
-        final Result<RefreshAccessTokenResponse, ErrorResponse<String>> result =
-                authService.refreshAccessToken(refreshToken);
-        return switch (result) {
+    public @NonNull ResponseEntity<?> refreshToken(@RequestHeader("X-Refresh-Token") String refreshToken) {
+
+        return switch (authService.refreshAccessToken(refreshToken)) {
             case Result.Success(RefreshAccessTokenResponse resp) -> ResponseEntity.ok(resp);
-            case Result.Failure(ErrorResponse(int statusCode, String message)) ->
-                    ResponseEntity.status(statusCode).body(message);
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
     }
 }

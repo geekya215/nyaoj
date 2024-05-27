@@ -9,6 +9,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+
 @Service
 public class RegistrationService {
     private final RegistrationMapper registrationMapper;
@@ -25,8 +28,14 @@ public class RegistrationService {
                        @NonNull final Long contestId) {
 
         final QueryWrapper<Contest> contestQueryWrapper = new QueryWrapper<>();
-        if (!contestMapper.exists(contestQueryWrapper.eq("id", contestId))) {
+        final Contest contest = contestMapper.selectOne(contestQueryWrapper.eq("id", contestId));
+        if (contest == null) {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such contest"));
+        }
+
+        final LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(contest.getStartTime())) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_BAD_REQUEST, "contest already started"));
         }
 
         final QueryWrapper<Registration> registrationQueryWrapper = new QueryWrapper<>();

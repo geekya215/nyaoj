@@ -62,6 +62,42 @@ public class ContestController {
         };
     }
 
+    @GetMapping("/{cid}/problems/{pseq}/statement")
+    public @NonNull ResponseEntity<?> getContestProblemStatement(
+            @PathVariable @Positive Long cid,
+            @PathVariable @Positive Integer pseq,
+            HttpServletResponse response
+    ) {
+        return switch (contestService.getContestProblemStatement(cid, pseq, response)) {
+            case Result.Success _ -> ResponseEntity.ok().build();
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
+        };
+    }
+
+    @GetMapping("/{cid}/problems/{pseq}/sample")
+    public @NonNull ResponseEntity<?> getContestProblemSample(
+            @PathVariable @Positive Long cid,
+            @PathVariable @Positive Integer pseq,
+            HttpServletResponse response
+    ) {
+        return switch (contestService.getContestProblemSample(cid, pseq, response)) {
+            case Result.Success _ -> ResponseEntity.ok().build();
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
+        };
+    }
+
+    @GetMapping("/{cid}/problems/{pseq}/testcase")
+    public @NonNull ResponseEntity<?> getContestProblemTestcase(
+            @PathVariable @Positive Long cid,
+            @PathVariable @Positive Integer pseq,
+            HttpServletResponse response
+    ) {
+        return switch (contestService.getContestProblemTestcase(cid, pseq, response)) {
+            case Result.Success _ -> ResponseEntity.ok().build();
+            case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
+        };
+    }
+
     @GetMapping
     public @NonNull ResponseEntity<?> getContestList(
             @RequestParam(defaultValue = "1") @Positive Integer page,

@@ -38,7 +38,7 @@ public class ProblemController {
             return ResponseEntity.status(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE).body("statement file must be pdf type");
         }
 
-        return switch (problemService.addProblemStatement(id, statement)) {
+        return switch (problemService.addProblemStatement(id, statement, "application/pdf")) {
             case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
@@ -57,7 +57,7 @@ public class ProblemController {
             return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST).body("sample in zip file is not valid pattern");
         }
 
-        return switch (problemService.addProblemSample(id, sample)) {
+        return switch (problemService.addProblemSample(id, sample, "application/zip")) {
             case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };
@@ -76,7 +76,7 @@ public class ProblemController {
             return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST).body("testcase in zip file is not valid pattern");
         }
 
-        return switch (problemService.addProblemTestcase(id, testcase)) {
+        return switch (problemService.addProblemTestcase(id, testcase, "application/zip")) {
             case Result.Success _ -> ResponseEntity.status(HttpServletResponse.SC_CREATED).build();
             case Result.Failure(ErrorResponse<String> error) -> ResponseEntity.status(error.statusCode()).body(error);
         };

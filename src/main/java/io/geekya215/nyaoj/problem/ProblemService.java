@@ -48,7 +48,8 @@ public class ProblemService {
 
     public @NonNull Result<Void, ErrorResponse<String>> addProblemStatement(
             @NonNull final Long problemId,
-            @NonNull final MultipartFile statementFile
+            @NonNull final MultipartFile statementFile,
+            @NonNull final String contentType
     ) {
         if (checkProblemExist(problemId)) {
             final UUID uuid = UUID.randomUUID();
@@ -66,7 +67,7 @@ public class ProblemService {
                 problemFileMapper.insert(problemFile);
             }
 
-            return minioService.putFile(uuid, statementFile, ".pdf");
+            return minioService.putFile(uuid, statementFile, ".pdf", contentType);
         } else {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such problem"));
         }
@@ -74,7 +75,8 @@ public class ProblemService {
 
     public @NonNull Result<Void, ErrorResponse<String>> addProblemSample(
             @NonNull final Long problemId,
-            @NonNull final MultipartFile sampleFile
+            @NonNull final MultipartFile sampleFile,
+            @NonNull final String contentType
     ) {
         if (checkProblemExist(problemId)) {
             final UUID uuid = UUID.randomUUID();
@@ -92,7 +94,7 @@ public class ProblemService {
                 problemFileMapper.insert(problemFile);
             }
 
-            return minioService.putFile(uuid, sampleFile, ".zip");
+            return minioService.putFile(uuid, sampleFile, ".zip", contentType);
         } else {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such problem"));
         }
@@ -100,7 +102,8 @@ public class ProblemService {
 
     public @NonNull Result<Void, ErrorResponse<String>> addProblemTestcase(
             @NonNull final Long problemId,
-            @NonNull final MultipartFile testcaseFile
+            @NonNull final MultipartFile testcaseFile,
+            @NonNull final String contentType
     ) {
         if (checkProblemExist(problemId)) {
             final UUID uuid = UUID.randomUUID();
@@ -118,7 +121,7 @@ public class ProblemService {
                 problemFileMapper.insert(problemFile);
             }
 
-            return minioService.putFile(uuid, testcaseFile, ".zip");
+            return minioService.putFile(uuid, testcaseFile, ".zip", contentType);
         } else {
             return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such problem"));
         }

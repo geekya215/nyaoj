@@ -13,10 +13,14 @@ import io.geekya215.nyaoj.problem.entity.ProblemFile;
 import io.geekya215.nyaoj.problem.mapper.ContestProblemMapper;
 import io.geekya215.nyaoj.problem.mapper.ProblemFileMapper;
 import io.geekya215.nyaoj.problem.mapper.ProblemMapper;
+import io.geekya215.nyaoj.storage.MinioService;
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,15 +29,26 @@ public class ContestService {
     private final ProblemMapper problemMapper;
     private final ProblemFileMapper problemFileMapper;
     private final ContestProblemMapper contestProblemMapper;
+    private final MinioService minioService;
 
     public ContestService(ContestMapper contestMapper,
                           ProblemMapper problemMapper,
                           ProblemFileMapper problemFileMapper,
-                          ContestProblemMapper contestProblemMapper) {
+                          ContestProblemMapper contestProblemMapper,
+                          MinioService minioService) {
         this.contestMapper = contestMapper;
         this.problemMapper = problemMapper;
         this.problemFileMapper = problemFileMapper;
         this.contestProblemMapper = contestProblemMapper;
+        this.minioService = minioService;
+    }
+
+    // call after check contest already exist
+    public boolean isAfterContestStarted(@NonNull Long contestId) {
+        final Contest contest = contestMapper.selectById(contestId);
+        final LocalDateTime now = LocalDateTime.now();
+
+        return now.isAfter(contest.getStartTime());
     }
 
     public @NonNull Result<Void, ErrorResponse<String>> createContest(@NonNull final CreateContestRequest createContestRequest) {
@@ -116,5 +131,120 @@ public class ContestService {
         contestProblemMapper.insert(contestProblem);
 
         return Result.success();
+    }
+
+    public @NonNull Result<Void, ErrorResponse<String>> getContestProblemStatement(
+            @NonNull final Long contestId,
+            @NonNull final Integer problemSequence,
+            @NonNull final HttpServletResponse response
+    ) {
+        final QueryWrapper<ContestProblem> contestProblemQueryWrapper = new QueryWrapper<>();
+        final ContestProblem contestProblem = contestProblemMapper
+                .selectOne(contestProblemQueryWrapper.eq("contest_id", contestId).eq("sequence", problemSequence));
+        if (contestProblem == null) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such contest problem"));
+        }
+
+        if (!isAfterContestStarted(contestId)) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_FORBIDDEN, "Contest has not started yet"));
+        }
+
+        final QueryWrapper<ProblemFile> problemFileQueryWrapper = new QueryWrapper<>();
+        final ProblemFile problemFile = problemFileMapper
+                .selectOne(problemFileQueryWrapper.eq("problem_id", contestProblem.getProblemId()));
+        final Result<byte[], ErrorResponse<String>> resp = minioService.getFile(problemFile.getStatementUuid(), ".pdf");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            return switch (resp) {
+                case Result.Success(byte[] data) -> {
+                    response.setContentType("application/pdf");
+                    response.setHeader("Content-Disposition", "inline; filename=" + "Problem-" + problemSequence + ".pdf");
+                    response.setHeader("Content-Length", String.valueOf(data.length));
+                    outputStream.write(data);
+                    outputStream.flush();
+
+                    yield Result.success();
+                }
+                case Result.Failure(ErrorResponse error) -> Result.failure(error);
+            };
+        } catch (IOException e) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage()));
+        }
+    }
+
+    public @NonNull Result<Void, ErrorResponse<String>> getContestProblemSample(
+            @NonNull final Long contestId,
+            @NonNull final Integer problemSequence,
+            @NonNull final HttpServletResponse response
+    ) {
+        final QueryWrapper<ContestProblem> contestProblemQueryWrapper = new QueryWrapper<>();
+        final ContestProblem contestProblem = contestProblemMapper
+                .selectOne(contestProblemQueryWrapper.eq("contest_id", contestId).eq("sequence", problemSequence));
+        if (contestProblem == null) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such contest problem"));
+        }
+
+        if (!isAfterContestStarted(contestId)) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_FORBIDDEN, "Contest has not started yet"));
+        }
+
+        final QueryWrapper<ProblemFile> problemFileQueryWrapper = new QueryWrapper<>();
+        final ProblemFile problemFile = problemFileMapper
+                .selectOne(problemFileQueryWrapper.eq("problem_id", contestProblem.getProblemId()));
+        final Result<byte[], ErrorResponse<String>> resp = minioService.getFile(problemFile.getSampleUuid(), ".zip");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            return switch (resp) {
+                case Result.Success(byte[] data) -> {
+                    response.setContentType("application/zip");
+                    response.setHeader("Content-Disposition", "attachment; filename=" + "sample-" + problemSequence + ".zip");
+                    response.setHeader("Content-Length", String.valueOf(data.length));
+                    outputStream.write(data);
+                    outputStream.flush();
+
+                    yield Result.success();
+                }
+                case Result.Failure(ErrorResponse<String> error) -> Result.failure(error);
+            };
+        } catch (IOException e) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage()));
+        }
+    }
+
+    public @NonNull Result<Void, ErrorResponse<String>> getContestProblemTestcase(
+            @NonNull final Long contestId,
+            @NonNull final Integer problemSequence,
+            @NonNull final HttpServletResponse response
+    ) {
+        final QueryWrapper<ContestProblem> contestProblemQueryWrapper = new QueryWrapper<>();
+        final ContestProblem contestProblem = contestProblemMapper
+                .selectOne(contestProblemQueryWrapper.eq("contest_id", contestId).eq("sequence", problemSequence));
+        if (contestProblem == null) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_NOT_FOUND, "no such contest problem"));
+        }
+
+        if (!isAfterContestStarted(contestId)) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_FORBIDDEN, "Contest has not started yet"));
+        }
+
+        final QueryWrapper<ProblemFile> problemFileQueryWrapper = new QueryWrapper<>();
+        final ProblemFile problemFile = problemFileMapper
+                .selectOne(problemFileQueryWrapper.eq("problem_id", contestProblem.getProblemId()));
+        final Result<byte[], ErrorResponse<String>> resp = minioService.getFile(problemFile.getTestcaseUuid(), ".zip");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            return switch (resp) {
+                case Result.Success(byte[] data) -> {
+                    response.setContentType("application/zip");
+                    response.setHeader("Content-Disposition", "attachment; filename=" + "testcase-" + problemSequence + ".zip");
+                    response.setHeader("Content-Length", String.valueOf(data.length));
+                    outputStream.write(data);
+                    outputStream.flush();
+
+                    yield Result.success();
+                }
+                case Result.Failure(ErrorResponse error) -> Result.failure(error);
+            };
+        } catch (IOException e) {
+            return Result.failure(ErrorResponse.of(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage()));
+
+        }
     }
 }

@@ -76,6 +76,5 @@ public final class FileChecker {
         } catch (IOException e) {
             return false;
         }
-
     }
 }
